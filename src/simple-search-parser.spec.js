@@ -275,9 +275,9 @@ describe("simple-search-parser", () => {
     ]
   ];
 
-  queries.forEach(([description, input, expected, run = 'only']) => {
+  for (const [description, input, expected, run = 'only'] of queries) {
     it[run](description, () => {
       expect(parse(input)).toEqual(expected);
     });
-  });
+  }
 });
