@@ -1,0 +1,61 @@
+Query
+  = Expr
+  / Term
+
+Expr
+  = not _+ left:Term _+ op:Op _+ right:Query 
+  	{ 
+      return { 
+        expr: { 
+          op, 
+          left: { 
+            op: "NOT", 
+            left: { left },
+            right: null
+          },
+          right
+        }
+      }
+    }
+  / left:Term _+ op:Op _+ right:Query
+  	{ 
+      return {
+        expr: { 
+          op,
+          left,
+          right
+        }
+      }
+    }
+
+Term
+  = "\"" term:[ a-zA-Z0-9]+ "\"" 
+    {
+      return {
+        type: 'phrase',
+        value: term.join("")
+      }
+    }
+  / term:[a-zA-Z0-9]+ 
+    {
+      return {
+        type: 'term',
+        value: term.join("")
+      }
+    }
+
+Op
+ = and
+ / or
+
+and
+  = "AND"
+  
+or
+  = "OR"
+
+not
+  = "NOT"
+
+_ "whitespace"
+  = [ \t\n\r]
