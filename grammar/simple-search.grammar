@@ -17,7 +17,17 @@ Expr
         }
       }
     }
-  / left:Term _+ op:Op _+ right:Query
+  / left:Term _+ op:and _+ right:Query
+  	{ 
+      return {
+        expr: { 
+          op,
+          left,
+          right
+        }
+      }
+    }
+  / left:Term _+ op:or _+ right:Query
   	{ 
       return {
         expr: { 
@@ -29,7 +39,7 @@ Expr
     }
 
 Term
-  = "\"" term:[ a-zA-Z0-9]+ "\"" 
+  = "\"" term:[^"]+ "\"" 
     {
       return {
         type: 'phrase',
