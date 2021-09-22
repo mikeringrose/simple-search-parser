@@ -111,11 +111,40 @@ describe("simple-search-parser", () => {
     [
       "should treat AND as higher precedence than OR",
       "alpha OR beta AND gamma",
-      { // update this with proper expected
+      {
         expr: {
-          op: "AND",
+          op: "OR",
           left: { type: "term", value: "alpha" },
-          right: {type: "term", value: "beta" },
+          right: {
+            expr: {
+              op: "AND",
+              left: { type: "term", value: "beta" },
+              right: {type: "term", value: "gamma" },
+            }    
+          }
+        }
+      }
+    ],
+    [
+      "should treat AND as higher precedence than OR",
+      "alpha OR beta AND gamma OR delta",
+      { // this might have to be updated once successful
+        expr: {
+          op: "OR",
+          left: { type: "term", value: "alpha" },
+          right: {
+            expr: {
+              op: "OR",
+              left: { type: "term", value: "delta" },
+              right: {
+                expr: {
+                  op: "AND",
+                  left: { type: "term", value: "beta" },
+                  right: {type: "term", value: "gamma" },    
+                }
+              }
+            }    
+          }
         }
       },
       SKIP
@@ -180,25 +209,23 @@ describe("simple-search-parser", () => {
       "\"alpha,beta,gamma\"",
       {
         type: "phrase",
-        value: "\"alpha,beta,gamma\""        
-      },
-      SKIP
+        value: "alpha,beta,gamma"        
+      }
     ],
     [
       "should treat parentheses within double-quoted strings as literals",
       "\"alpha(beta(gamma))\"",
       {
         type: "phrase",
-        value: "\"alpha(beta(gamma))\""        
+        value: "alpha(beta(gamma))"        
       },
-      SKIP
     ],
     [
       "should treat parentheses and comma combinations within double-quoted strings as literals",
       "\"alpha,(beta,gamma),(delta,(epsilon))\"",
       {
         type: "phrase",
-        value: "\"alpha,(beta,gamma),(delta,(epsilon))\""        
+        value: "alpha,(beta,gamma),(delta,(epsilon))"
       },
       SKIP
     ],
@@ -235,9 +262,8 @@ describe("simple-search-parser", () => {
       "\"Jones (Smith), Jane D\"",
       {
         type: "phrase",
-        value: "\"Jones (Smith), Jane D\""
+        value: "Jones (Smith), Jane D"
       },
-      SKIP
     ],
     [
       "should parse comma-separated double-quoted strings as ANDed phrases",
@@ -277,6 +303,9 @@ describe("simple-search-parser", () => {
 
   for (const [description, input, expected, run = 'only'] of queries) {
     it[run](description, () => {
+      if (input === 'alpha OR beta AND gamma OR delta') {
+        console.log(JSON.stringify(parse(input), null, 2));
+      }
       expect(parse(input)).toEqual(expected);
     });
   }
