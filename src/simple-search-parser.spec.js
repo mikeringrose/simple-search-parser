@@ -303,9 +303,6 @@ describe("simple-search-parser", () => {
 
   for (const [description, input, expected, run = 'only'] of queries) {
     it[run](description, () => {
-      if (input === 'alpha OR beta AND gamma OR delta') {
-        console.log(JSON.stringify(parse(input), null, 2));
-      }
       expect(parse(input)).toEqual(expected);
     });
   }
