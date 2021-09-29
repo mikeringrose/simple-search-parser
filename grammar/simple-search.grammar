@@ -1,42 +1,112 @@
-Query
-  = Expr
-  / Term
+{
+  const findLeftMostOperator = (node) => {
+    if (!node) {
+      return null;
+    }
+    
+    if (node.operator) {
+      return node;
+    }
+    
+    if (!node.left) {
+      return node;
+    }
+    
+    return findLeftMostOperator(node.left);
+  };
+  
+  function buildTermTree(terms) {
+    if (terms.length === 1) {
+      return terms[0];
+    }
+
+    return {
+      operator: "AND",
+      left: terms[0],
+      right: buildTermTree(terms.slice(1))
+    };
+  }
+  
+  function buildOrTree(terms) {
+    if (terms.length === 1) {
+      return terms[0];
+    }
+
+    return {
+      operator: "OR",
+      left: terms[0],
+      right: buildOrTree(terms.slice(1))
+    };
+  }  
+}
 
 Expr
-  = not _+ left:Term _+ op:Op _+ right:Query 
-  	{ 
-      return { 
-        expr: { 
-          op, 
-          left: { 
-            op: "NOT", 
-            left: { left },
-            right: null
-          },
-          right
-        }
+  = Or_Expr
+
+Or_Expr
+  = head:And_Expr tail:(_* "OR"? _* And_Expr)*
+  	{
+      let left = head;
+      let right;
+      let operator;
+
+      // this is a bit hairy and ugly
+      if (!head.operator && head.left && head.left.operator === "NOT") {
+        return findLeftMostOperator(head);
+      } else if (tail.length == 1) {
+        operator = tail[1] ? tail[1] : "<implicit>";
+        // left = head.operator ? head : head.left;
+        right = tail[0][3].operator
+        		? tail[0][3]
+                : tail[0][3].left
+                  ? tail[0][3].left
+                  : tail[0][3];
       }
+      
+      if (!operator && !tail.length) {
+      	return left;
+      }
+      
+  	  const terms = tail.map(term => term[3]);
+      return buildOrTree([head, ...terms]);
     }
-  / left:Term _+ op:and _+ right:Query
-  	{ 
+
+And_Expr
+  = first:Not_Expr _* "," _* second:Not_Expr _* tail:(_* "," _* Not_Expr)*
+    {
+	  const terms = tail.map(term => term[3]);
+      return buildTermTree([first, second, ...terms]);
+    }
+  / head:Not_Expr tail:(_+ "AND" _+ Not_Expr)*
+    {
+	  const terms = tail.map(term => term[3]);
+      return buildTermTree([head, ...terms]);
+    }
+
+Not_Expr
+  = "(" expr:Expr ")" { return expr; }
+  / "NOT" _+ right:Term
+    {
       return {
-        expr: { 
-          op,
-          left,
-          right
-        }
+        operator: "NOT",
+        right
       }
     }
-  / left:Term _+ op:or _+ right:Query
-  	{ 
+  / head:(Term _+)? "NOT" _+ right:Term
+    {
+      let left = null;
+      
+      if (head) {
+        left = head[0]
+      }
+
       return {
-        expr: { 
-          op,
-          left,
-          right
-        }
+        operator: "NOT",
+        left: left,
+        right
       }
     }
+  / term:Term
 
 Term
   = "\"" term:[^"]+ "\"" 
@@ -53,19 +123,6 @@ Term
         value: term.join("")
       }
     }
-
-Op
- = and
- / or
-
-and
-  = "AND"
-  
-or
-  = "OR"
-
-not
-  = "NOT"
 
 _ "whitespace"
   = [ \t\n\r]

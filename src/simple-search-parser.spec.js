@@ -1,11 +1,13 @@
 // const { parse } = require("./simple-search-parser");
 
-const peg = require('pegjs');
-const fs = require('fs');
+const peg = require("pegjs");
+const fs = require("fs");
 
-const { parse } = peg.generate(fs.readFileSync('./grammar/simple-search.grammar').toString());
+const { parse } = peg.generate(
+  fs.readFileSync("./grammar/simple-search.grammar").toString()
+);
 
-const SKIP = 'skip';
+const SKIP = "skip";
 
 describe("simple-search-parser", () => {
   const queries = [
@@ -14,294 +16,344 @@ describe("simple-search-parser", () => {
       "alpha",
       {
         type: "term",
-        value: "alpha"        
-      }
+        value: "alpha",
+      },
     ],
     [
       "single keyword phrase",
-      "\"alpha\"",
+      '"alpha"',
       {
         type: "phrase",
-        value: "alpha"        
-      }
+        value: "alpha",
+      },
     ],
     [
       "single keyword phrase with special characters",
-      "\"alpha AND beta\"",
+      '"alpha AND beta"',
       {
         type: "phrase",
-        value: "alpha AND beta"        
-      }
-    ],    
+        value: "alpha AND beta",
+      },
+    ],
     [
       "simple conjunction",
       "alpha AND beta",
       {
-        expr: {
-          op: "AND",
-          left: { type: "term", value: "alpha" },
-          right: { type: "term", value: "beta" }
-        }
-      }
+        operator: "AND",
+        left: { type: "term", value: "alpha" },
+        right: { type: "term", value: "beta" },
+      },
     ],
     [
       "simple conjunction with phrases",
-      "\"alpha\" AND \"beta\"",
+      '"alpha" AND "beta"',
       {
-        expr: {
-          op: "AND",
-          left: { type: "phrase", value: "alpha" },
-          right: { type: "phrase", value: "beta" }
-        }
-      }
+        operator: "AND",
+        left: { type: "phrase", value: "alpha" },
+        right: { type: "phrase", value: "beta" },
+      },
     ],
     [
       "3 ANDed terms should maintain all of them",
       "alpha AND beta AND gamma",
       {
-        expr: {
-          op: "AND",
-          left: { type: "term", value: "alpha" },
-          right: {
-            expr: {
-              op: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
-            }
-          }
-        }
+        operator: "AND",
+        left: { type: "term", value: "alpha" },
+        right: {
+          operator: "AND",
+          left: { type: "term", value: "beta" },
+          right: { type: "term", value: "gamma" },
+        },
       },
     ],
     [
       "comma-delimited list of terms should be parsed as 3 ANDed terms",
       "alpha,beta,gamma",
       {
-        expr: {
-          op: "AND",
-          left: { type: "term", value: "alpha" },
-          right: {
-            expr: {
-              op: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
-            }
-          }
-        }
+        operator: "AND",
+        left: { type: "term", value: "alpha" },
+        right: {
+          operator: "AND",
+          left: { type: "term", value: "beta" },
+          right: { type: "term", value: "gamma" },
+        },
       },
-      SKIP
     ],
     [
       "comma-delimited list of terms with separating spaces should be parsed as 3 ANDed terms",
       "alpha, beta, gamma",
       {
-        expr: {
-          op: "AND",
-          left: { type: "term", value: "alpha" },
-          right: {
-            expr: {
-              op: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
-            }
-          }
-        }
+        operator: "AND",
+        left: { type: "term", value: "alpha" },
+        right: {
+          operator: "AND",
+          left: { type: "term", value: "beta" },
+          right: { type: "term", value: "gamma" },
+        },
       },
-      SKIP
     ],
     [
       "should treat AND as higher precedence than OR",
       "alpha OR beta AND gamma",
       {
-        expr: {
-          op: "OR",
-          left: { type: "term", value: "alpha" },
-          right: {
-            expr: {
-              op: "AND",
-              left: { type: "term", value: "beta" },
-              right: {type: "term", value: "gamma" },
-            }    
-          }
-        }
-      }
+        operator: "OR",
+        left: { type: "term", value: "alpha" },
+        right: {
+          operator: "AND",
+          left: { type: "term", value: "beta" },
+          right: { type: "term", value: "gamma" },
+        },
+      },
     ],
     [
       "should treat AND as higher precedence than OR",
       "alpha OR beta AND gamma OR delta",
-      { // this might have to be updated once successful
-        expr: {
-          op: "OR",
-          left: { type: "term", value: "alpha" },
+      {
+        operator: "OR",
+        left: {
+          type: "term",
+          value: "alpha",
+        },
+        right: {
+          operator: "OR",
+          left: {
+            operator: "AND",
+            left: {
+              type: "term",
+              value: "beta",
+            },
+            right: {
+              type: "term",
+              value: "gamma",
+            },
+          },
           right: {
-            expr: {
-              op: "OR",
-              left: { type: "term", value: "delta" },
-              right: {
-                expr: {
-                  op: "AND",
-                  left: { type: "term", value: "beta" },
-                  right: {type: "term", value: "gamma" },    
-                }
-              }
-            }    
-          }
-        }
+            type: "term",
+            value: "delta",
+          },
+        },
       },
-      SKIP
     ],
     [
       "should treat 3 ORed terms as equal precedence ",
       "alpha OR beta OR gamma",
       {
-        expr: {
-          op: "OR",
-          left: { type: "term", value: "alpha" },
-          right: {
-            expr: {
-              op: "OR",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
-            }
-          }
-        }
+        operator: "OR",
+        left: { type: "term", value: "alpha" },
+        right: {
+          operator: "OR",
+          left: { type: "term", value: "beta" },
+          right: { type: "term", value: "gamma" },
+        },
       },
     ],
     [
       "should treat a parentheses group containing an OR as higher precedence than AND",
       "(alpha OR beta) AND gamma",
       {
-        expr: {
-          op: "OR",
-          left: { type: "term", value: "alpha" },
+        operator: "AND",
+        left: {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "alpha",
+          },
           right: {
-            expr: {
-              op: "OR",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
-            }
-          }
-        }
+            type: "term",
+            value: "beta",
+          },
+        },
+        right: {
+          type: "term",
+          value: "gamma",
+        },
       },
-      SKIP
     ],
     [
       "should treat OR in a double-quoted string as a literal",
-      "alpha AND \"beta OR gamma\"",
+      'alpha AND "beta OR gamma"',
       {
-        expr: {
-          op: "AND",
-          left: { type: "term", value: "alpha" },
-          right: { type: "phrase", value: "beta OR gamma" }
-        }
-      }
+        operator: "AND",
+        left: { type: "term", value: "alpha" },
+        right: { type: "phrase", value: "beta OR gamma" },
+      },
     ],
     [
       "should treat all operators within a double-quoted string as literals",
-      "\"alpha AND beta OR gamma NOT delta\"",
+      '"alpha AND beta OR gamma NOT delta"',
       {
         type: "phrase",
-        value: "\"alpha AND beta OR gamma NOT delta\""        
+        value: "alpha AND beta OR gamma NOT delta",
       },
-      SKIP
     ],
     [
       "should treat commas within double-quoted strings as literals",
-      "\"alpha,beta,gamma\"",
+      '"alpha,beta,gamma"',
       {
         type: "phrase",
-        value: "alpha,beta,gamma"        
-      }
+        value: "alpha,beta,gamma",
+      },
     ],
     [
       "should treat parentheses within double-quoted strings as literals",
-      "\"alpha(beta(gamma))\"",
+      '"alpha(beta(gamma))"',
       {
         type: "phrase",
-        value: "alpha(beta(gamma))"        
+        value: "alpha(beta(gamma))",
       },
     ],
     [
       "should treat parentheses and comma combinations within double-quoted strings as literals",
-      "\"alpha,(beta,gamma),(delta,(epsilon))\"",
+      '"alpha,(beta,gamma),(delta,(epsilon))"',
       {
         type: "phrase",
-        value: "alpha,(beta,gamma),(delta,(epsilon))"
+        value: "alpha,(beta,gamma),(delta,(epsilon))",
       },
-      SKIP
     ],
     [
       "should handle deeply-nested groups",
       "(a OR b) AND (c OR (d AND e))",
       {
-        // fill this in when we have a better idea of how groups will look
+        operator: "AND",
+        left: {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "a",
+          },
+          right: {
+            type: "term",
+            value: "b",
+          },
+        },
+        right: {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "c",
+          },
+          right: {
+            operator: "AND",
+            left: {
+              type: "term",
+              value: "d",
+            },
+            right: {
+              type: "term",
+              value: "e",
+            },
+          },
+        },
       },
-      SKIP
     ],
     [
       "should handle implied operators when combined with double-quoted strings",
-      "\"a,(b,c),d\" AND e,f g",
+      '"a,(b,c),d" AND e,f g',
       {
         // fill this in when we have a better idea of how groups will look
       },
-      SKIP
+      SKIP,
     ],
     [
       "should handle names that contain embedded commas",
-      "\"Smith, John L\",\"Jones, Jane D\"",
+      '"Smith, John L","Jones, Jane D"',
       {
-        expr: {
-          op: "AND",
-          left: { type: "phrase", value: "Smith, John L" },
-          right: { type: "phrase", value: "Jones, Jane D" }
-        }
+        operator: "AND",
+        left: { type: "phrase", value: "Smith, John L" },
+        right: { type: "phrase", value: "Jones, Jane D" },
       },
-      SKIP
     ],
     [
       "should handle names that contain pre-married names",
-      "\"Jones (Smith), Jane D\"",
+      '"Jones (Smith), Jane D"',
       {
         type: "phrase",
-        value: "Jones (Smith), Jane D"
+        value: "Jones (Smith), Jane D",
       },
     ],
     [
       "should parse comma-separated double-quoted strings as ANDed phrases",
-      "\"alpha\",\"beta\",\"gamma\"",
+      '"alpha","beta","gamma"',
       {
-        expr: {
-          op: "AND",
-          left: { type: "term", value: "alpha" },
+        operator: "AND",
+        left: {
+          type: "phrase",
+          value: "alpha",
+        },
+        right: {
+          operator: "AND",
+          left: {
+            type: "phrase",
+            value: "beta",
+          },
           right: {
-            expr: {
-              op: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
-            }
-          }
-        }
+            type: "phrase",
+            value: "gamma",
+          },
+        },
       },
-      SKIP
     ],
     [
       "should support double-quoted phrases combined with comma-separated terms",
-      "\"a OR b\",c,d OR e",
+      '"a OR b",c,d OR e',
       {
-        // fill this in when group format is supported
+        operator: "OR",
+        left: {
+          operator: "AND",
+          left: {
+            type: "phrase",
+            value: "a OR b",
+          },
+          right: {
+            operator: "AND",
+            left: {
+              type: "term",
+              value: "c",
+            },
+            right: {
+              type: "term",
+              value: "d",
+            },
+          },
+        },
+        right: {
+          type: "term",
+          value: "e",
+        },
       },
-      SKIP
     ],
     [
       "super complex",
-      "a AND (b OR \"c,d\" AND (\"e OR f\"))",
+      'a AND (b OR "c,d" AND ("e OR f"))',
       {
-        // fill this in when group format is supported
+        operator: "AND",
+        left: {
+          type: "term",
+          value: "a",
+        },
+        right: {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "b",
+          },
+          right: {
+            operator: "AND",
+            left: {
+              type: "phrase",
+              value: "c,d",
+            },
+            right: {
+              type: "phrase",
+              value: "e OR f",
+            },
+          },
+        },
       },
-      SKIP
-    ]
+    ],
   ];
 
-  for (const [description, input, expected, run = 'only'] of queries) {
+  for (const [description, input, expected, run = "only"] of queries) {
     it[run](description, () => {
       expect(parse(input)).toEqual(expected);
     });
