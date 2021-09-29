@@ -15,29 +15,21 @@
     return findLeftMostOperator(node.left);
   };
   
-  function buildTermTree(terms) {
+  const buildOpTree = (operator, terms) => {
     if (terms.length === 1) {
       return terms[0];
     }
 
     return {
-      operator: "AND",
+      operator,
       left: terms[0],
-      right: buildTermTree(terms.slice(1))
+      right: buildOpTree(operator, terms.slice(1))
     };
-  }
+  };
   
-  function buildOrTree(terms) {
-    if (terms.length === 1) {
-      return terms[0];
-    }
-
-    return {
-      operator: "OR",
-      left: terms[0],
-      right: buildOrTree(terms.slice(1))
-    };
-  }  
+  const buildAndTree = buildOpTree.bind(null, "AND");
+  
+  const buildOrTree = buildOpTree.bind(null, "OR");
 }
 
 Expr
@@ -75,12 +67,12 @@ And_Expr
   = first:Not_Expr _* "," _* second:Not_Expr _* tail:(_* "," _* Not_Expr)*
     {
 	  const terms = tail.map(term => term[3]);
-      return buildTermTree([first, second, ...terms]);
+      return buildAndTree([first, second, ...terms]);
     }
   / head:Not_Expr tail:(_+ "AND" _+ Not_Expr)*
     {
 	  const terms = tail.map(term => term[3]);
-      return buildTermTree([head, ...terms]);
+      return buildAndTree([head, ...terms]);
     }
 
 Not_Expr

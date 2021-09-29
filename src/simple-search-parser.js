@@ -172,13 +172,13 @@ function peg$parse(input, options) {
       peg$c4 = peg$literalExpectation(",", false),
       peg$c5 = function(first, second, tail) {
       	  const terms = tail.map(term => term[3]);
-            return buildTermTree([first, second, ...terms]);
+            return buildAndTree([first, second, ...terms]);
           },
       peg$c6 = "AND",
       peg$c7 = peg$literalExpectation("AND", false),
       peg$c8 = function(head, tail) {
       	  const terms = tail.map(term => term[3]);
-            return buildTermTree([head, ...terms]);
+            return buildAndTree([head, ...terms]);
           },
       peg$c9 = "(",
       peg$c10 = peg$literalExpectation("(", false),
@@ -1059,29 +1059,21 @@ function peg$parse(input, options) {
       return findLeftMostOperator(node.left);
     };
     
-    function buildTermTree(terms) {
+    const buildOpTree = (operator, terms) => {
       if (terms.length === 1) {
         return terms[0];
       }
 
       return {
-        operator: "AND",
+        operator,
         left: terms[0],
-        right: buildTermTree(terms.slice(1))
+        right: buildOpTree(operator, terms.slice(1))
       };
-    }
+    };
     
-    function buildOrTree(terms) {
-      if (terms.length === 1) {
-        return terms[0];
-      }
-
-      return {
-        operator: "OR",
-        left: terms[0],
-        right: buildOrTree(terms.slice(1))
-      };
-    }  
+    const buildAndTree = buildOpTree.bind(null, "AND");
+    
+    const buildOrTree = buildOpTree.bind(null, "OR");
 
 
   peg$result = peg$startRuleFunction();
