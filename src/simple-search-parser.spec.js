@@ -45,6 +45,64 @@ describe("simple-search-parser", () => {
       },
     ],
     [
+      "unary NOT, unquoted term",
+      'NOT alpha',
+      {
+        operator: "NOT",
+        right: { type: "term", value: "alpha" }
+      }
+    ],
+    [
+      "unary NOT, quoted term",
+      'NOT "alpha"',
+      {
+        operator: "NOT",
+        right: { type: "phrase", value: "alpha" }
+      }
+    ],
+    [
+      "unary NOT of conjunction (currently broken)",
+      'NOT (alpha AND beta)',
+      {
+        operator: "NOT",
+        right: {
+          operator: "AND",
+          left: { type: "term", value: "alpha" },
+          right: { type: "term", value: "beta" },
+        }
+      }
+    ],
+    [
+      "conjunction of unary NOTs",
+      'NOT alpha AND NOT beta',
+      {
+        operator: "AND",
+        left: {
+          operator: "NOT",
+          right: { type: "term", value: "alpha" },
+        },
+        right: {
+          operator: "NOT",
+          right: { type: "term", value: "beta" },
+        }
+      }
+    ],
+    [
+      "disjunction of unary NOTs",
+      'NOT alpha OR NOT beta',
+      {
+        operator: "OR",
+        left: {
+          operator: "NOT",
+          right: { type: "term", value: "alpha" },
+        },
+        right: {
+          operator: "NOT",
+          right: { type: "term", value: "beta" },
+        }
+      }
+    ],
+    [
       "simple conjunction with phrases",
       '"alpha" AND "beta"',
       {
