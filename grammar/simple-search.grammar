@@ -37,7 +37,7 @@ Expr
 
 Or_Expr
   = head:And_Expr tail:(_* "OR"? _* And_Expr)*
-  	{
+    {
       let left = head;
       let right;
       let operator;
@@ -49,29 +49,29 @@ Or_Expr
         operator = tail[1] ? tail[1] : "<implicit>";
         // left = head.operator ? head : head.left;
         right = tail[0][3].operator
-        		? tail[0][3]
+            ? tail[0][3]
                 : tail[0][3].left
                   ? tail[0][3].left
                   : tail[0][3];
       }
       
       if (!operator && !tail.length) {
-      	return left;
+        return left;
       }
       
-  	  const terms = tail.map(term => term[3]);
+      const terms = tail.map(term => term[3]);
       return buildOrTree([head, ...terms]);
     }
 
 And_Expr
   = first:Not_Expr _* "," _* second:Not_Expr _* tail:(_* "," _* Not_Expr)*
     {
-	  const terms = tail.map(term => term[3]);
+      const terms = tail.map(term => term[3]);
       return buildAndTree([first, second, ...terms]);
     }
   / head:Not_Expr tail:(_+ "AND" _+ Not_Expr)*
     {
-	  const terms = tail.map(term => term[3]);
+      const terms = tail.map(term => term[3]);
       return buildAndTree([head, ...terms]);
     }
 

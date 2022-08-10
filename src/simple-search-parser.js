@@ -155,29 +155,29 @@ function peg$parse(input, options) {
               operator = tail[1] ? tail[1] : "<implicit>";
               // left = head.operator ? head : head.left;
               right = tail[0][3].operator
-              		? tail[0][3]
+                  ? tail[0][3]
                       : tail[0][3].left
                         ? tail[0][3].left
                         : tail[0][3];
             }
             
             if (!operator && !tail.length) {
-            	return left;
+              return left;
             }
             
-        	  const terms = tail.map(term => term[3]);
+            const terms = tail.map(term => term[3]);
             return buildOrTree([head, ...terms]);
           },
       peg$c3 = ",",
       peg$c4 = peg$literalExpectation(",", false),
       peg$c5 = function(first, second, tail) {
-      	  const terms = tail.map(term => term[3]);
+            const terms = tail.map(term => term[3]);
             return buildAndTree([first, second, ...terms]);
           },
       peg$c6 = "AND",
       peg$c7 = peg$literalExpectation("AND", false),
       peg$c8 = function(head, tail) {
-      	  const terms = tail.map(term => term[3]);
+            const terms = tail.map(term => term[3]);
             return buildAndTree([head, ...terms]);
           },
       peg$c9 = "(",
