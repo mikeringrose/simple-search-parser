@@ -216,8 +216,8 @@ function peg$parse(input, options) {
               value: term.join("")
             }
           },
-      peg$c23 = /^[a-zA-Z0-9]/,
-      peg$c24 = peg$classExpectation([["a", "z"], ["A", "Z"], ["0", "9"]], false, false),
+      peg$c23 = /^[^("| |,)]/,
+      peg$c24 = peg$classExpectation(["(", "\"", "|", " ", "|", ",", ")"], true, false),
       peg$c25 = function(term) {
             return {
               type: 'term',
@@ -834,7 +834,7 @@ function peg$parse(input, options) {
           s2 = peg$FAILED;
         }
         if (s2 !== peg$FAILED) {
-          s3 = peg$parseTerm();
+          s3 = peg$parseNot_Expr();
           if (s3 !== peg$FAILED) {
             peg$savedPos = s0;
             s1 = peg$c16(s3);

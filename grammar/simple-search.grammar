@@ -77,7 +77,7 @@ And_Expr
 
 Not_Expr
   = "(" expr:Expr ")" { return expr; }
-  / "NOT" _+ right:Term
+  / "NOT" _+ right:Not_Expr
     {
       return {
         operator: "NOT",
@@ -108,7 +108,7 @@ Term
         value: term.join("")
       }
     }
-  / term:[a-zA-Z0-9]+ 
+  / term:[^("| |,)]+ 
     {
       return {
         type: 'term',
