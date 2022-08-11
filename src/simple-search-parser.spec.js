@@ -1099,7 +1099,7 @@ describe("simple-search-parser", () => {
         }
       ],
       [
-        "chain of nested NOTs",
+        "chain of nested NOTs with terms",
         "a AND NOT (b AND NOT (c AND NOT (d AND NOT e)))",
         {
           operator: "AND",
@@ -1135,6 +1135,54 @@ describe("simple-search-parser", () => {
                         operator: "NOT",
                         right: {
                           type: "term",
+                          value: "e"  
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      [
+        "chain of nested NOTs with phrases",
+        "\"a\" AND NOT (\"b\" AND NOT (\"c\" AND NOT (\"d\" AND NOT \"e\")))",
+        {
+          operator: "AND",
+          left: {
+            type: "phrase",
+            value: "a"
+          },
+          right: {
+            operator: "NOT",
+            right: {
+              operator: "AND",
+              left: {
+                type: "phrase",
+                value: "b"
+              },
+              right: {
+                operator: "NOT",
+                right: {
+                  operator: "AND",
+                  left: {
+                    type: "phrase",
+                    value: "c"
+                  },
+                  right: {
+                    operator: "NOT",
+                    right: {
+                      operator: "AND",
+                      left: {
+                        type: "phrase",
+                        value: "d"
+                      },
+                      right: {
+                        operator: "NOT",
+                        right: {
+                          type: "phrase",
                           value: "e"  
                         }
                       }
