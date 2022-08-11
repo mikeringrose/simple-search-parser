@@ -2,6 +2,7 @@
 
 const peg = require("pegjs");
 const fs = require("fs");
+const { fail } = require("assert");
 
 const { parse } = peg.generate(
   fs.readFileSync("./grammar/simple-search.grammar").toString()
@@ -22,10 +23,44 @@ function testQueries(queries) {
       expect(parse(input)).toEqual(expected);
     });
   }
-
 }
 
 describe("simple-search-parser", () => {
+  describe.only("negative tests", () => {
+    it("unbalanced parentheses should throw an error", () => {
+      const input = "(alpha";
+
+      try {
+        parse(input);
+        fail("an error should have been thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(Error);
+      }
+    });
+
+    it("AND without right operand should throw an error", () => {
+      const input = "alpha AND ";
+
+      try {
+        parse(input);
+        fail("an error should have been thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(Error);
+      }
+    });
+
+    it("AND without left operand should throw an error", () => {
+      const input = " AND beta";
+
+      try {
+        parse(input);
+        fail("an error should have been thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(Error);
+      }
+    });
+  });
+
   describe.skip("spacing", () => {
     const queries = [
       [
@@ -164,6 +199,14 @@ describe("simple-search-parser", () => {
           type: "phrase",
           value: " \t alpha \t beta \t "
         }
+      ],
+      [
+        "should parse various languages from input",
+        `"alpha ${COMPUTER_CMN} ${COMPUTER_JPN}"`,
+        {
+          type: "phrase",
+          value: `alpha ${COMPUTER_CMN} ${COMPUTER_JPN}`
+        }
       ]
     ];
 
@@ -193,26 +236,653 @@ describe("simple-search-parser", () => {
     testQueries(queries);
   });
 
-  describe("SPECIFIC", () => {
+  describe("simple logical connectives", () => {
+    describe("terms", () => {
+      const queries = [
+        [
+          "simple conjunction",
+          "alpha AND beta",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: { type: "term", value: "beta" },
+          },
+        ],
+        [
+          "simple disjunction",
+          "alpha OR beta",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha" },
+            right: { type: "term", value: "beta" },
+          },
+        ]
+      ];
+  
+      testQueries(queries);  
+    });
+
+    describe("phrases", () => {
+      const queries = [
+        [
+          "simple conjunction",
+          "\"alpha\" AND \"beta\"",
+          {
+            operator: "AND",
+            left: { type: "phrase", value: "alpha" },
+            right: { type: "phrase", value: "beta" },
+          },
+        ],
+        [
+          "simple disjunction",
+          "\"alpha\" OR \"beta\"",
+          {
+            operator: "OR",
+            left: { type: "phrase", value: "alpha" },
+            right: { type: "phrase", value: "beta" },
+          },
+        ],
+        [
+          "should treat all operators within a double-quoted string as literals",
+          '"alpha AND beta OR gamma NOT delta"',
+          {
+            type: "phrase",
+            value: "alpha AND beta OR gamma NOT delta",
+          },
+        ],
+        [
+          "should treat commas within double-quoted strings as literals",
+          '"alpha,beta,gamma"',
+          {
+            type: "phrase",
+            value: "alpha,beta,gamma",
+          },
+        ],
+        [
+          "should treat parentheses within double-quoted strings as literals",
+          '"alpha(beta(gamma))"',
+          {
+            type: "phrase",
+            value: "alpha(beta(gamma))",
+          },
+        ],
+        [
+          "should treat parentheses and comma combinations within double-quoted strings as literals",
+          '"alpha,(beta,gamma),(delta,(epsilon))"',
+          {
+            type: "phrase",
+            value: "alpha,(beta,gamma),(delta,(epsilon))",
+          },
+        ]  
+      ];
+  
+      testQueries(queries);  
+    });
+
+    describe("terms and phrases", () => {
+      const queries = [
+        [
+          "simple conjunction",
+          "alpha AND \"beta\"",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: { type: "phrase", value: "beta" },
+          },
+        ],
+        [
+          "simple disjunction",
+          "\"alpha\" OR beta",
+          {
+            operator: "OR",
+            left: { type: "phrase", value: "alpha" },
+            right: { type: "term", value: "beta" },
+          },
+        ]
+      ];
+  
+      testQueries(queries);  
+    });
+
+    describe("phrases containing reserved words", () => {
+      const queries = [
+        [
+          "embedded conjunction",
+          "alpha AND \"beta AND gamma\"",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: { type: "phrase", value: "beta AND gamma" },
+          },
+        ],
+        [
+          "embedded disjunction",
+          "alpha AND \"beta OR gamma\"",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: { type: "phrase", value: "beta OR gamma" },
+          },
+        ],
+        [
+          "embedded disjunction",
+          "\"alpha AND beta\" AND \"gamma OR delta\"",
+          {
+            operator: "AND",
+            left: { type: "phrase", value: "alpha AND beta" },
+            right: { type: "phrase", value: "gamma OR delta" },
+          },
+        ]
+      ];
+  
+      testQueries(queries);  
+    });
+
+    describe("multiple terms", () => {
+      const queries = [
+        [
+          "AND/AND",
+          "alpha AND beta AND gamma",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta" },
+              right: { type: "term", value: "gamma" }
+            },
+          }
+        ],
+        [
+          "AND/OR",
+          "alpha AND beta OR gamma",
+          {
+            operator: "OR",
+            left: {
+              operator: "AND",
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" }
+            },
+            right: { type: "term", value: "gamma" }            
+          }
+        ],
+        [
+          "OR/AND",
+          "alpha OR beta AND gamma",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta" },
+              right: { type: "term", value: "gamma" }
+            },
+          }
+        ],
+        [
+          "OR/OR",
+          "alpha OR beta OR gamma",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "OR",
+              left: { type: "term", value: "beta" },
+              right: { type: "term", value: "gamma" }
+            },
+          }
+        ],
+      ];
+  
+      testQueries(queries);  
+
+    });
+
+    describe("multiple phrases", () => {
+      const queries = [
+        [
+          "AND/AND",
+          "\"alpha\" AND \"beta\" AND \"gamma\"",
+          {
+            operator: "AND",
+            left: { type: "phrase", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "phrase", value: "beta" },
+              right: { type: "phrase", value: "gamma" }
+            },
+          }
+        ],
+        [
+          "AND/OR",
+          "\"alpha\" AND \"beta\" OR \"gamma\"",
+          {
+            operator: "OR",
+            left: {
+              operator: "AND",
+              left: { type: "phrase", value: "alpha" },
+              right: { type: "phrase", value: "beta" }
+            },
+            right: { type: "phrase", value: "gamma" }            
+          }
+        ],
+        [
+          "OR/AND",
+          "\"alpha\" OR \"beta\" AND \"gamma\"",
+          {
+            operator: "OR",
+            left: { type: "phrase", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "phrase", value: "beta" },
+              right: { type: "phrase", value: "gamma" }
+            },
+          }
+        ],
+        [
+          "OR/OR",
+          "\"alpha\" OR \"beta\" OR \"gamma\"",
+          {
+            operator: "OR",
+            left: { type: "phrase", value: "alpha" },
+            right: {
+              operator: "OR",
+              left: { type: "phrase", value: "beta" },
+              right: { type: "phrase", value: "gamma" }
+            },
+          }
+        ],
+      ];
+  
+      testQueries(queries);  
+
+    });
+
+    describe("multiple terms and phrases intermingled", () => {
+      const queries = [
+        [
+          "AND/AND",
+          "\"alpha\" AND beta AND gamma",
+          {
+            operator: "AND",
+            left: { type: "phrase", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta" },
+              right: { type: "term", value: "gamma" }
+            },
+          }
+        ],
+        [
+          "AND/AND",
+          "alpha AND \"beta\" AND gamma",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "phrase", value: "beta" },
+              right: { type: "term", value: "gamma" }
+            },
+          }
+        ],
+        [
+          "AND/AND",
+          "alpha AND beta AND \"gamma\"",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta" },
+              right: { type: "phrase", value: "gamma" }
+            },
+          }
+        ]
+      ];
+  
+      testQueries(queries);  
+    });
+  });
+
+  describe("NOT operator", () => {
+    describe("unary operand", () => {
+      const queries = [
+        [
+          "unary NOT, unquoted term",
+          'NOT alpha',
+          {
+            operator: "NOT",
+            right: { type: "term", value: "alpha" }
+          }
+        ],
+        [
+          "unary NOT, quoted term",
+          'NOT "alpha"',
+          {
+            operator: "NOT",
+            right: { type: "phrase", value: "alpha" }
+          }
+        ],
+        [
+          "unary NOT, quoted term",
+          'NOT "alpha beta"',
+          {
+            operator: "NOT",
+            right: { type: "phrase", value: "alpha beta" }
+          }
+        ],
+        [
+          "unary NOT, quoted term containing AND reserved word",
+          'NOT "alpha AND beta"',
+          {
+            operator: "NOT",
+            right: { type: "phrase", value: "alpha AND beta" }
+          }
+        ],
+        [
+          "unary NOT, quoted term containing OR reserved word",
+          'NOT "alpha OR beta"',
+          {
+            operator: "NOT",
+            right: { type: "phrase", value: "alpha OR beta" }
+          }
+        ],
+        [
+          "unary NOT, unquoted term",
+          'NOT "NOT alpha"',
+          {
+            operator: "NOT",
+            right: { type: "phrase", value: "NOT alpha" }
+          }
+        ],
+        [
+          "unary NOT, quoted term",
+          'NOT "alpha NOT beta"',
+          {
+            operator: "NOT",
+            right: { type: "phrase", value: "alpha NOT beta" }
+          }
+        ]
+      ];
+
+      testQueries(queries);  
+    });
+
+    describe("grouped operands containing conjunctions/disjunctions", () => {
+      const queries = [
+        [
+          "unary NOT of terms conjunction",
+          'NOT (alpha AND beta)',
+          {
+            operator: "NOT",
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" },
+            }
+          }
+        ],
+        [
+          "unary NOT of terms disjunction",
+          'NOT (alpha OR beta)',
+          {
+            operator: "NOT",
+            right: {
+              operator: "OR",
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" },
+            }
+          }
+        ],
+        [
+          "unary NOT of phrases conjunction",
+          'NOT ("alpha" AND "beta")',
+          {
+            operator: "NOT",
+            right: {
+              operator: "AND",
+              left: { type: "phrase", value: "alpha" },
+              right: { type: "phrase", value: "beta" },
+            }
+          }
+        ],
+        [
+          "unary NOT of terms disjunction",
+          'NOT ("alpha" OR "beta")',
+          {
+            operator: "NOT",
+            right: {
+              operator: "OR",
+              left: { type: "phrase", value: "alpha" },
+              right: { type: "phrase", value: "beta" },
+            }
+          }
+        ],
+        [
+          "OR NOT grouped AND",
+          "a OR NOT (b AND c)",
+          {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "a"
+            },
+            right: {
+              operator: "NOT",
+              right: {
+                operator: "AND",
+                left: {
+                  type: "term",
+                  value: "b"
+                },
+                right: {
+                  type: "term",
+                  value: "c"
+                }
+              }
+            }
+          }
+        ],
+        [
+          "AND NOT grouped OR",
+          "a AND NOT (b OR c)",
+          {
+            operator: "AND",
+            left: {
+              type: "term",
+              value: "a"
+            },
+            right: {
+              operator: "NOT",
+              right: {
+                operator: "OR",
+                left: {
+                  type: "term",
+                  value: "b"
+                },
+                right: {
+                  type: "term",
+                  value: "c"
+                }
+              }
+            }
+          }
+        ],
+        ];
+
+      testQueries(queries);  
+    });
+
+    describe("multiple NOT operators", () => {
+      const queries = [
+        [
+          "conjunction of unary NOT terms",
+          'NOT alpha AND NOT beta',
+          {
+            operator: "AND",
+            left: {
+              operator: "NOT",
+              right: { type: "term", value: "alpha" },
+            },
+            right: {
+              operator: "NOT",
+              right: { type: "term", value: "beta" },
+            }
+          }
+        ],
+        [
+          "disjunction of unary NOT terms",
+          'NOT alpha OR NOT beta',
+          {
+            operator: "OR",
+            left: {
+              operator: "NOT",
+              right: { type: "term", value: "alpha" },
+            },
+            right: {
+              operator: "NOT",
+              right: { type: "term", value: "beta" },
+            }
+          }
+        ],
+        [
+          "conjunction of unary NOT phrases",
+          'NOT "alpha" AND NOT "beta"',
+          {
+            operator: "AND",
+            left: {
+              operator: "NOT",
+              right: { type: "phrase", value: "alpha" },
+            },
+            right: {
+              operator: "NOT",
+              right: { type: "phrase", value: "beta" },
+            }
+          }
+        ],
+        [
+          "disjunction of unary NOT phrases",
+          'NOT "alpha" OR NOT "beta"',
+          {
+            operator: "OR",
+            left: {
+              operator: "NOT",
+              right: { type: "phrase", value: "alpha" },
+            },
+            right: {
+              operator: "NOT",
+              right: { type: "phrase", value: "beta" },
+            }
+          }
+        ],
+      ];
+
+      testQueries(queries);  
+    });
+  });
+
+  describe("commas", () => {
+    describe("only commas", () => {
+      const queries = [
+        [
+          "comma-delimited list of terms should be parsed as 3 ANDed terms",
+          "alpha,beta,gamma",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta" },
+              right: { type: "term", value: "gamma" },
+            },
+          },
+        ],
+        [
+          "comma-delimited list of terms with separating spaces should be parsed as 3 ANDed terms",
+          "alpha, beta, gamma",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta" },
+              right: { type: "term", value: "gamma" },
+            },
+          },
+        ],
+      ];
+
+      testQueries(queries);
+    });
+
+    describe("with other connectives", () => {
+      const queries = [
+        [
+          "comma-delimited list of terms should be parsed as 3 ANDed terms",
+          "alpha, beta AND gamma",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta" },
+              right: { type: "term", value: "gamma" },
+            },
+          },
+          SKIP
+        ],
+        [
+          "comma-delimited list of terms with separating spaces should be parsed as 3 ANDed terms",
+          "alpha, beta OR gamma",
+          {
+            operator: "OR",
+            left: { 
+              operator: "AND",
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" }
+            },
+            right: { type: "term", value: "gamma" }
+          }
+        ],
+      ];
+
+      testQueries(queries);
+    });
+  });
+
+  describe("parentheses", () => {
     const queries = [
       [
-        "simple conjunction",
-        "alpha AND beta",
+        "should treat a parentheses group containing an OR as higher precedence than AND",
+        "(alpha OR beta) AND gamma",
         {
           operator: "AND",
-          left: { type: "term", value: "alpha" },
-          right: { type: "term", value: "beta" },
+          left: {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "alpha",
+            },
+            right: {
+              type: "term",
+              value: "beta",
+            },
+          },
+          right: {
+            type: "term",
+            value: "gamma",
+          },
         },
       ],
       [
-        "simple disjunction",
-        "alpha OR beta",
+        "superfluous parentheses should be removed",
+        "((alpha))",
         {
-          operator: "OR",
-          left: { type: "term", value: "alpha" },
-          right: { type: "term", value: "beta" },
-        },
-      ]
+          type: "term",
+          value: "alpha"
+        }
+      ],
     ];
 
     testQueries(queries);
@@ -220,158 +890,6 @@ describe("simple-search-parser", () => {
 
   describe("miscellaneous", () => {
     const queries = [
-      [
-        "single keyword",
-        "alpha",
-        {
-          type: "term",
-          value: "alpha",
-        },
-      ],
-      [
-        "single keyword phrase",
-        '"alpha"',
-        {
-          type: "phrase",
-          value: "alpha",
-        },
-      ],
-      [
-        "single keyword phrase with special characters",
-        '"alpha AND beta"',
-        {
-          type: "phrase",
-          value: "alpha AND beta",
-        },
-      ],
-      [
-        "simple conjunction",
-        "alpha AND beta",
-        {
-          operator: "AND",
-          left: { type: "term", value: "alpha" },
-          right: { type: "term", value: "beta" },
-        },
-      ],
-      [
-        "unary NOT, unquoted term",
-        'NOT alpha',
-        {
-          operator: "NOT",
-          right: { type: "term", value: "alpha" }
-        }
-      ],
-      [
-        "unary NOT, quoted term",
-        'NOT "alpha"',
-        {
-          operator: "NOT",
-          right: { type: "phrase", value: "alpha" }
-        }
-      ],
-      [
-        "unary NOT of conjunction (currently broken)",
-        'NOT (alpha AND beta)',
-        {
-          operator: "NOT",
-          right: {
-            operator: "AND",
-            left: { type: "term", value: "alpha" },
-            right: { type: "term", value: "beta" },
-          }
-        }
-      ],
-      [
-        "conjunction of unary NOTs",
-        'NOT alpha AND NOT beta',
-        {
-          operator: "AND",
-          left: {
-            operator: "NOT",
-            right: { type: "term", value: "alpha" },
-          },
-          right: {
-            operator: "NOT",
-            right: { type: "term", value: "beta" },
-          }
-        }
-      ],
-      [
-        "disjunction of unary NOTs",
-        'NOT alpha OR NOT beta',
-        {
-          operator: "OR",
-          left: {
-            operator: "NOT",
-            right: { type: "term", value: "alpha" },
-          },
-          right: {
-            operator: "NOT",
-            right: { type: "term", value: "beta" },
-          }
-        }
-      ],
-      [
-        "simple conjunction with phrases",
-        '"alpha" AND "beta"',
-        {
-          operator: "AND",
-          left: { type: "phrase", value: "alpha" },
-          right: { type: "phrase", value: "beta" },
-        },
-      ],
-      [
-        "3 ANDed terms should maintain all of them",
-        "alpha AND beta AND gamma",
-        {
-          operator: "AND",
-          left: { type: "term", value: "alpha" },
-          right: {
-            operator: "AND",
-            left: { type: "term", value: "beta" },
-            right: { type: "term", value: "gamma" },
-          },
-        },
-      ],
-      [
-        "comma-delimited list of terms should be parsed as 3 ANDed terms",
-        "alpha,beta,gamma",
-        {
-          operator: "AND",
-          left: { type: "term", value: "alpha" },
-          right: {
-            operator: "AND",
-            left: { type: "term", value: "beta" },
-            right: { type: "term", value: "gamma" },
-          },
-        },
-      ],
-      [
-        "comma-delimited list of terms with separating spaces should be parsed as 3 ANDed terms",
-        "alpha, beta, gamma",
-        {
-          operator: "AND",
-          left: { type: "term", value: "alpha" },
-          right: {
-            operator: "AND",
-            left: { type: "term", value: "beta" },
-            right: { type: "term", value: "gamma" },
-          },
-        },
-      ],
-      [
-        "should treat AND as higher precedence than OR",
-        "alpha OR beta AND gamma",
-        {
-          operator: "OR",
-          left: { type: "term", value: "alpha" },
-          right: {
-            operator: "AND",
-            left: { type: "term", value: "beta" },
-            right: { type: "term", value: "gamma" },
-          },
-        },
-      ],
       [
         "should treat AND as higher precedence than OR",
         "alpha OR beta AND gamma OR delta",
@@ -399,82 +917,6 @@ describe("simple-search-parser", () => {
               value: "delta",
             },
           },
-        },
-      ],
-      [
-        "should treat 3 ORed terms as equal precedence ",
-        "alpha OR beta OR gamma",
-        {
-          operator: "OR",
-          left: { type: "term", value: "alpha" },
-          right: {
-            operator: "OR",
-            left: { type: "term", value: "beta" },
-            right: { type: "term", value: "gamma" },
-          },
-        },
-      ],
-      [
-        "should treat a parentheses group containing an OR as higher precedence than AND",
-        "(alpha OR beta) AND gamma",
-        {
-          operator: "AND",
-          left: {
-            operator: "OR",
-            left: {
-              type: "term",
-              value: "alpha",
-            },
-            right: {
-              type: "term",
-              value: "beta",
-            },
-          },
-          right: {
-            type: "term",
-            value: "gamma",
-          },
-        },
-      ],
-      [
-        "should treat OR in a double-quoted string as a literal",
-        'alpha AND "beta OR gamma"',
-        {
-          operator: "AND",
-          left: { type: "term", value: "alpha" },
-          right: { type: "phrase", value: "beta OR gamma" },
-        },
-      ],
-      [
-        "should treat all operators within a double-quoted string as literals",
-        '"alpha AND beta OR gamma NOT delta"',
-        {
-          type: "phrase",
-          value: "alpha AND beta OR gamma NOT delta",
-        },
-      ],
-      [
-        "should treat commas within double-quoted strings as literals",
-        '"alpha,beta,gamma"',
-        {
-          type: "phrase",
-          value: "alpha,beta,gamma",
-        },
-      ],
-      [
-        "should treat parentheses within double-quoted strings as literals",
-        '"alpha(beta(gamma))"',
-        {
-          type: "phrase",
-          value: "alpha(beta(gamma))",
-        },
-      ],
-      [
-        "should treat parentheses and comma combinations within double-quoted strings as literals",
-        '"alpha,(beta,gamma),(delta,(epsilon))"',
-        {
-          type: "phrase",
-          value: "alpha,(beta,gamma),(delta,(epsilon))",
         },
       ],
       [
@@ -619,92 +1061,6 @@ describe("simple-search-parser", () => {
         },
       ],
       [
-        "NOT a grouped OR",
-        "NOT (a OR b)",
-        {
-          operator: "NOT",
-          right: {
-            operator: "OR",
-            left: {
-              type: "term",
-              value: "a"
-            },
-            right: {
-              type: "term",
-              value: "b"
-            }
-          }
-        }
-      ],
-      [
-        "NOT a grouped AND",
-        "NOT (a AND b)",
-        {
-          operator: "NOT",
-          right: {
-            operator: "AND",
-            left: {
-              type: "term",
-              value: "a"
-            },
-            right: {
-              type: "term",
-              value: "b"
-            }
-          }
-        }
-      ],
-      [
-        "OR NOT grouped AND",
-        "a OR NOT (b AND c)",
-        {
-          operator: "OR",
-          left: {
-            type: "term",
-            value: "a"
-          },
-          right: {
-            operator: "NOT",
-            right: {
-              operator: "AND",
-              left: {
-                type: "term",
-                value: "b"
-              },
-              right: {
-                type: "term",
-                value: "c"
-              }
-            }
-          }
-        }
-      ],
-      [
-        "AND NOT grouped OR",
-        "a AND NOT (b OR c)",
-        {
-          operator: "AND",
-          left: {
-            type: "term",
-            value: "a"
-          },
-          right: {
-            operator: "NOT",
-            right: {
-              operator: "OR",
-              left: {
-                type: "term",
-                value: "b"
-              },
-              right: {
-                type: "term",
-                value: "c"
-              }
-            }
-          }
-        }
-      ],
-      [
         "really complicated nested NOTs",
         "(a AND NOT b) AND NOT (c OR NOT d)",
         {
@@ -794,5 +1150,4 @@ describe("simple-search-parser", () => {
   
     testQueries(queries);
   });
-
 });
