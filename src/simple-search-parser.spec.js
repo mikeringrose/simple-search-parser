@@ -4,18 +4,15 @@ const peg = require("pegjs");
 const fs = require("fs");
 const { fail } = require("assert");
 
-const { parse } = peg.generate(
+const { parse, SyntaxError } = peg.generate(
   fs.readFileSync("./grammar/simple-search.grammar").toString()
 );
 
 const SKIP = "skip";
 
 const COMPUTER_JPN = "コンピュータ";
-const SURGERY_JPN = "サージャリー";
 const COMPUTER_CMN = "计算机";
-const SURGERY_CMN = "手术";
 const COMPUTER_THAI = "คอมพิวเตอร์";
-const SURGERY_THAI = "การผ่าตัด";
 
 function testQueries(queries) {
   for (const [description, input, expected, run = "only"] of queries) {
@@ -25,74 +22,56 @@ function testQueries(queries) {
   }
 }
 
+function testQueriesWithSyntaxErrors(queries) {
+  for (const [description, input, run = "only"] of queries) {
+    it[run](description, () => {
+      try {
+        parse(input);
+        fail("an error should have been thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(SyntaxError);
+      }
+    });
+  }
+}
+
 describe("simple-search-parser", () => {
-  describe.only("negative tests", () => {
-    it("unbalanced parentheses should throw an error", () => {
-      const input = "(alpha";
-
-      try {
-        parse(input);
-        fail("an error should have been thrown");
-      } catch (err) {
-        expect(err).toBeInstanceOf(Error);
-      }
-    });
-
-    it("AND without right operand should throw an error", () => {
-      const input = "alpha AND ";
-
-      try {
-        parse(input);
-        fail("an error should have been thrown");
-      } catch (err) {
-        expect(err).toBeInstanceOf(Error);
-      }
-    });
-
-    it("AND without left operand should throw an error", () => {
-      const input = " AND beta";
-
-      try {
-        parse(input);
-        fail("an error should have been thrown");
-      } catch (err) {
-        expect(err).toBeInstanceOf(Error);
-      }
-    });
-  });
-
-  describe.skip("spacing", () => {
+  describe("negative tests", () => {
     const queries = [
       [
-        "leading whitespace",
-        "  alpha",
-        {
-          type: "term",
-          value: "alpha"
-        },
-        SKIP
+        "should allow single word terms",
+        " \t alpha"
       ],
       [
-        "trailing whitespace",
-        "  alpha",
-        {
-          type: "term",
-          value: "alpha"
-        },
-        SKIP
+        "should allow hyphens within term",
+        "alpha \t "
       ],
       [
-        "should ignore leading AND trailing whitespace",
-        "  alpha  ",
-        {
-          type: "term",
-          value: "alpha"
-        },
-        SKIP
+        "should treat 1+ terms as an AND",
+        " \t alpha \t "
       ]
     ];
 
-    testQueries(queries);
+    testQueriesWithSyntaxErrors(queries);
+  });
+
+  describe("spacing", () => {
+    const queries = [
+      [
+        "leading whitespace should throw an error",
+        " \t alpha"
+      ],
+      [
+        "trailing whitespace should throw an error",
+        "alpha \t "
+      ],
+      [
+        "leading and trailing whitespace should throw an error",
+        " \t alpha \t "
+      ]
+    ];
+
+    testQueriesWithSyntaxErrors(queries);
   });
 
   describe("non-latin inputs", () => {
@@ -251,6 +230,24 @@ describe("simple-search-parser", () => {
         [
           "simple disjunction",
           "alpha OR beta",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha" },
+            right: { type: "term", value: "beta" },
+          },
+        ],
+        [
+          "simple conjunction with excess spacing",
+          "alpha \t AND \t beta",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha" },
+            right: { type: "term", value: "beta" },
+          },
+        ],
+        [
+          "simple disjunction with excess spacing",
+          "alpha \t OR \t beta",
           {
             operator: "OR",
             left: { type: "term", value: "alpha" },
@@ -1135,7 +1132,7 @@ describe("simple-search-parser", () => {
                         operator: "NOT",
                         right: {
                           type: "term",
-                          value: "e"  
+                          value: "e"
                         }
                       }
                     }
@@ -1183,7 +1180,7 @@ describe("simple-search-parser", () => {
                         operator: "NOT",
                         right: {
                           type: "phrase",
-                          value: "e"  
+                          value: "e"
                         }
                       }
                     }
