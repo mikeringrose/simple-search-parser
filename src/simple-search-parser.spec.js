@@ -14,7 +14,7 @@ const COMPUTER_JPN = "コンピュータ";
 const COMPUTER_CMN = "计算机";
 const COMPUTER_THAI = "คอมพิวเตอร์";
 
-function testQueries(queries) {
+function testSyntacticallyCorrectQueries(queries) {
   for (const [description, input, expected, run = "only"] of queries) {
     it[run](description, () => {
       expect(parse(input)).toEqual(expected);
@@ -39,35 +39,22 @@ describe("simple-search-parser", () => {
   describe("negative tests", () => {
     const queries = [
       [
-        "should allow single word terms",
-        " \t alpha"
+        "unbalanced parentheses should throw an error",
+        "(alpha"
       ],
       [
-        "should allow hyphens within term",
-        "alpha \t "
+        "unbalanced double quotes should throw an error",
+        "\"alpha"
       ],
       [
-        "should treat 1+ terms as an AND",
-        " \t alpha \t "
-      ]
-    ];
-
-    testQueriesWithSyntaxErrors(queries);
-  });
-
-  describe("spacing", () => {
-    const queries = [
-      [
-        "leading whitespace should throw an error",
-        " \t alpha"
+        "AND without right operand should throw an error",
+        "alpha AND ",
+        SKIP
       ],
       [
-        "trailing whitespace should throw an error",
-        "alpha \t "
-      ],
-      [
-        "leading and trailing whitespace should throw an error",
-        " \t alpha \t "
+        "AND without left operand should throw an error",
+        " AND beta",
+        SKIP
       ]
     ];
 
@@ -95,7 +82,7 @@ describe("simple-search-parser", () => {
         ]
       ];
   
-      testQueries(queries);
+      testSyntacticallyCorrectQueries(queries);
     });
   
     describe("japanese inputs", () => {
@@ -118,7 +105,7 @@ describe("simple-search-parser", () => {
         ]
       ];
   
-      testQueries(queries);
+      testSyntacticallyCorrectQueries(queries);
     });
   
     describe("thai inputs", () => {
@@ -141,7 +128,7 @@ describe("simple-search-parser", () => {
         ]
       ];
   
-      testQueries(queries);
+      testSyntacticallyCorrectQueries(queries);
     });  
   });
 
@@ -189,7 +176,7 @@ describe("simple-search-parser", () => {
       ]
     ];
 
-    testQueries(queries);
+    testSyntacticallyCorrectQueries(queries);
   });
 
   describe("term inputs", () => {
@@ -212,7 +199,38 @@ describe("simple-search-parser", () => {
       ]
     ];
 
-    testQueries(queries);
+    testSyntacticallyCorrectQueries(queries);
+  });
+
+  describe("spacing", () => {
+    const queries = [
+      [
+        "leading whitespace should be trimmed",
+        " \t alpha",
+        {
+          type: "term",
+          value: "alpha"
+        }
+      ],
+      [
+        "trailing whitespace should be trimmed",
+        "alpha \t ",
+        {
+          type: "term",
+          value: "alpha"
+        }
+      ],
+      [
+        "leading and trailing whitespace be trimmed",
+        " \t alpha \t ",
+        {
+          type: "term",
+          value: "alpha"
+        }
+      ]
+    ];
+
+    testSyntacticallyCorrectQueries(queries);
   });
 
   describe("simple logical connectives", () => {
@@ -256,7 +274,7 @@ describe("simple-search-parser", () => {
         ]
       ];
   
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
 
     describe("phrases", () => {
@@ -313,7 +331,7 @@ describe("simple-search-parser", () => {
         ]  
       ];
   
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
 
     describe("terms and phrases", () => {
@@ -338,7 +356,7 @@ describe("simple-search-parser", () => {
         ]
       ];
   
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
 
     describe("phrases containing reserved words", () => {
@@ -372,7 +390,7 @@ describe("simple-search-parser", () => {
         ]
       ];
   
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
 
     describe("multiple terms", () => {
@@ -431,7 +449,7 @@ describe("simple-search-parser", () => {
         ],
       ];
   
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
 
     });
 
@@ -491,7 +509,7 @@ describe("simple-search-parser", () => {
         ],
       ];
   
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
 
     });
 
@@ -538,7 +556,7 @@ describe("simple-search-parser", () => {
         ]
       ];
   
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
   });
 
@@ -603,7 +621,7 @@ describe("simple-search-parser", () => {
         ]
       ];
 
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
 
     describe("grouped operands containing conjunctions/disjunctions", () => {
@@ -708,7 +726,7 @@ describe("simple-search-parser", () => {
         ],
         ];
 
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
 
     describe("multiple NOT operators", () => {
@@ -775,7 +793,7 @@ describe("simple-search-parser", () => {
         ],
       ];
 
-      testQueries(queries);  
+      testSyntacticallyCorrectQueries(queries);  
     });
   });
 
@@ -810,7 +828,7 @@ describe("simple-search-parser", () => {
         ],
       ];
 
-      testQueries(queries);
+      testSyntacticallyCorrectQueries(queries);
     });
 
     describe("with other connectives", () => {
@@ -844,7 +862,7 @@ describe("simple-search-parser", () => {
         ],
       ];
 
-      testQueries(queries);
+      testSyntacticallyCorrectQueries(queries);
     });
   });
 
@@ -882,7 +900,7 @@ describe("simple-search-parser", () => {
       ],
     ];
 
-    testQueries(queries);
+    testSyntacticallyCorrectQueries(queries);
   });
 
   describe("miscellaneous", () => {
@@ -1193,6 +1211,6 @@ describe("simple-search-parser", () => {
       ]
     ];
   
-    testQueries(queries);
+    testSyntacticallyCorrectQueries(queries);
   });
 });

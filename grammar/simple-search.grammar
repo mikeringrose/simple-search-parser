@@ -36,7 +36,7 @@ Expr
   = Or_Expr
 
 Or_Expr
-  = head:And_Expr tail:(_* "OR"? _* And_Expr)*
+  = _* head:And_Expr tail:(_* "OR"? _* And_Expr)* _*
     {
       let left = head;
       let right;
