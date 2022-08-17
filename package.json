@@ -20,7 +20,9 @@
   },
   "homepage": "https://github.com/mikeringrose/simple-search-parser#readme",
   "dependencies": {
-    "jest": "^27.2.1",
     "pegjs": "^0.10.0"
+  },
+  "devDependencies": {
+    "jest": "^27.2.1"
   }
 }
