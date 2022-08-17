@@ -39,23 +39,21 @@ describe("simple-search-parser", () => {
   describe("negative tests", () => {
     const queries = [
       [
-        "unbalanced parentheses should throw an error",
+        "unbalanced left parentheses should throw an error",
         "(alpha"
       ],
       [
-        "unbalanced double quotes should throw an error",
-        "\"alpha"
+        "unbalanced right parentheses should throw an error",
+        "alpha)"
       ],
       [
-        "AND without right operand should throw an error",
-        "alpha AND ",
-        SKIP
+        "unbalanced left double quotes should throw an error",
+        '"alpha'
       ],
       [
-        "AND without left operand should throw an error",
-        " AND beta",
-        SKIP
-      ]
+        "unbalanced right double quotes should throw an error",
+        'alpha"'
+      ]      
     ];
 
     testQueriesWithSyntaxErrors(queries);
@@ -172,6 +170,70 @@ describe("simple-search-parser", () => {
         {
           type: "phrase",
           value: `alpha ${COMPUTER_CMN} ${COMPUTER_JPN}`
+        }
+      ],
+      [
+        "left-and-right unicode double quotation marks",
+        '“alpha”',
+        {
+          type: "phrase",
+          value: "alpha"
+        }
+      ],
+      [
+        "inverted left-and-right unicode double quotation marks",
+        '“alpha”',
+        {
+          type: "phrase",
+          value: "alpha"
+        }
+      ],
+      [
+        "only left unicode double quotation marks",
+        '“alpha”',
+        {
+          type: "phrase",
+          value: "alpha"
+        }
+      ],
+      [
+        "only right unicode double quotation marks",
+        '”alpha“',
+        {
+          type: "phrase",
+          value: "alpha"
+        }
+      ],
+      [
+        "prefix ascii double quote quotes + suffix left unicode double quotation marks",
+        '"alpha“',
+        {
+          type: "phrase",
+          value: "alpha"
+        }
+      ],
+      [
+        "prefix ascii double quote quotes + suffix right unicode double quotation marks",
+        '"alpha”',
+        {
+          type: "phrase",
+          value: "alpha"
+        }
+      ],
+      [
+        "prefix left unicode double quotes + suffix ascii double quote quotation marks",
+        '“alpha"',
+        {
+          type: "phrase",
+          value: "alpha"
+        }
+      ],
+      [
+        "prefix right unicode double quotes + suffix ascii double quote quotation marks",
+        '”alpha"',
+        {
+          type: "phrase",
+          value: "alpha"
         }
       ]
     ];
@@ -560,6 +622,74 @@ describe("simple-search-parser", () => {
     });
   });
 
+  describe("incomplete connectives", () => {
+    const queries = [
+      [
+        "AND without right operand should treat AND as part of query",
+        "alpha AND ",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "alpha"
+          },
+          right: {
+            type: "term",
+            value: "AND"
+          }
+        }
+      ],
+      [
+        "AND without left operand should treat AND as part of query",
+        " AND beta",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "AND"
+          },
+          right: {
+            type: "term",
+            value: "beta"
+          }
+        }
+      ],
+      [
+        "OR without right operand should treat OR as part of query",
+        "alpha OR ",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "alpha"
+          },
+          right: {
+            type: "term",
+            value: "OR"
+          }
+        },
+        SKIP
+      ],
+      [
+        "OR without left operand should treat OR as part of query",
+        " OR beta",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "OR"
+          },
+          right: {
+            type: "term",
+            value: "beta"
+          }
+        }
+      ],
+    ];
+
+    testSyntacticallyCorrectQueries(queries);  
+  });
+
   describe("NOT operator", () => {
     describe("unary operand", () => {
       const queries = [
@@ -834,7 +964,7 @@ describe("simple-search-parser", () => {
     describe("with other connectives", () => {
       const queries = [
         [
-          "comma-delimited list of terms should be parsed as 3 ANDed terms",
+          "mixed usage of comma and AND should treat as all ANDs",
           "alpha, beta AND gamma",
           {
             operator: "OR",
@@ -848,7 +978,7 @@ describe("simple-search-parser", () => {
           SKIP
         ],
         [
-          "comma-delimited list of terms with separating spaces should be parsed as 3 ANDed terms",
+          "commas should be treated as ANDs in precedence order",
           "alpha, beta OR gamma",
           {
             operator: "OR",

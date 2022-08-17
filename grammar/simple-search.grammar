@@ -101,14 +101,14 @@ Not_Expr
   / term:Term
 
 Term
-  = "\"" term:[^"]+ "\"" 
+  = DOUBLE_QUOTES term:[^"”“]+ DOUBLE_QUOTES 
     {
       return {
         type: 'phrase',
         value: term.join("")
       }
     }
-  / term:[^("| |,)]+ 
+  / term:[^("|”|“| |,)]+ 
     {
       return {
         type: 'term',
@@ -118,3 +118,6 @@ Term
 
 _ "whitespace"
   = [ \t\n\r]
+
+DOUBLE_QUOTES "double quotes"
+  = ["“”]
