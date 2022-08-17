@@ -206,8 +206,8 @@ function peg$parse(input, options) {
               right
             }
           },
-      peg$c18 = /^[^DOUBLE_QUOTES]/,
-      peg$c19 = peg$classExpectation(["D", "O", "U", "B", "L", "E", "_", "Q", "U", "O", "T", "E", "S"], true, false),
+      peg$c18 = /^[^"\u201D\u201C]/,
+      peg$c19 = peg$classExpectation(["\"", "\u201D", "\u201C"], true, false),
       peg$c20 = function(term) {
             return {
               type: 'phrase',
