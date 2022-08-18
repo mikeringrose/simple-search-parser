@@ -258,6 +258,22 @@ describe("simple-search-parser", () => {
           type: "term",
           value: "alpha-beta"
         }
+      ],
+      [
+        "should allow space within term",
+        "alpha beta   gamma",
+        {
+          type: "term",
+          value: "alpha beta   gamma"
+        }
+      ],
+      [
+        "should allow tab within term",
+        "alpha\tbeta\tgamma",
+        {
+          type: "term",
+          value: "alpha\tbeta\tgamma"
+        }
       ]
     ];
 
@@ -332,6 +348,42 @@ describe("simple-search-parser", () => {
             operator: "OR",
             left: { type: "term", value: "alpha" },
             right: { type: "term", value: "beta" },
+          },
+        ],
+        [
+          "simple conjunction with terms containing multiple words",
+          "alpha a AND beta b",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha a" },
+            right: { type: "term", value: "beta b" },
+          },
+        ],
+        [
+          "simple disjunction with terms containing multiple words",
+          "alpha a OR beta b",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha a" },
+            right: { type: "term", value: "beta b" },
+          },
+        ],
+        [
+          "simple conjunction with excess spacing and terms containing multiple words",
+          "alpha a \t AND \t beta b",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha a" },
+            right: { type: "term", value: "beta b" },
+          },
+        ],
+        [
+          "simple disjunction with excess spacing and terms containing multiple words",
+          "alpha a \t OR \t beta b",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha a" },
+            right: { type: "term", value: "beta b" },
           },
         ]
       ];
@@ -415,6 +467,24 @@ describe("simple-search-parser", () => {
             left: { type: "phrase", value: "alpha" },
             right: { type: "term", value: "beta" },
           },
+        ],
+        [
+          "simple conjunction with term having multiple words",
+          "alpha a AND \"beta\"",
+          {
+            operator: "AND",
+            left: { type: "term", value: "alpha a" },
+            right: { type: "phrase", value: "beta" },
+          },
+        ],
+        [
+          "simple disjunction with term having multiple words",
+          "\"alpha\" OR beta b",
+          {
+            operator: "OR",
+            left: { type: "phrase", value: "alpha" },
+            right: { type: "term", value: "beta b" },
+          },
         ]
       ];
   
@@ -462,11 +532,13 @@ describe("simple-search-parser", () => {
           "alpha AND beta AND gamma",
           {
             operator: "AND",
-            left: { type: "term", value: "alpha" },
-            right: {
+            left: {
               operator: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" }
+            },
+            right: {
+              type: "term", value: "gamma"
             },
           }
         ],
@@ -497,16 +569,70 @@ describe("simple-search-parser", () => {
           }
         ],
         [
-          "OR/OR",
-          "alpha OR beta OR gamma",
+          "OR/OR with terms containing multiple words",
+          "alpha a OR beta b OR gamma g",
           {
             operator: "OR",
-            left: { type: "term", value: "alpha" },
-            right: {
+            left: {
               operator: "OR",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
+              left: { type: "term", value: "alpha a" },
+              right: { type: "term", value: "beta b" },
             },
+            right: { type: "term", value: "gamma g" }
+          }
+        ],
+        [
+          "AND/AND with terms containing multiple words",
+          "alpha a AND beta b AND gamma g",
+          {
+            operator: "AND",
+            left: {
+              operator: "AND",
+              left: { type: "term", value: "alpha a" },
+              right: { type: "term", value: "beta b" }
+            },
+            right: {
+              type: "term", value: "gamma g"
+            },
+          }
+        ],
+        [
+          "AND/OR with terms containing multiple words",
+          "alpha a AND beta b OR gamma g",
+          {
+            operator: "OR",
+            left: {
+              operator: "AND",
+              left: { type: "term", value: "alpha a" },
+              right: { type: "term", value: "beta b" }
+            },
+            right: { type: "term", value: "gamma g" }            
+          }
+        ],
+        [
+          "OR/AND with terms containing multiple words",
+          "alpha a A OR beta b B AND gamma g G",
+          {
+            operator: "OR",
+            left: { type: "term", value: "alpha a A" },
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "beta b B" },
+              right: { type: "term", value: "gamma g G" }
+            },
+          }
+        ],
+        [
+          "OR/OR with terms containing multiple words",
+          "alpha a A OR beta b B OR gamma g G",
+          {
+            operator: "OR",
+            left: {
+              operator: "OR",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "term", value: "beta b B" },
+            },
+            right: { type: "term", value: "gamma g G" }
           }
         ],
       ];
@@ -522,12 +648,12 @@ describe("simple-search-parser", () => {
           "\"alpha\" AND \"beta\" AND \"gamma\"",
           {
             operator: "AND",
-            left: { type: "phrase", value: "alpha" },
-            right: {
+            left: {
               operator: "AND",
-              left: { type: "phrase", value: "beta" },
-              right: { type: "phrase", value: "gamma" }
+              left: { type: "phrase", value: "alpha" },
+              right: { type: "phrase", value: "beta" },
             },
+            right: { type: "phrase", value: "gamma" }
           }
         ],
         [
@@ -561,12 +687,12 @@ describe("simple-search-parser", () => {
           "\"alpha\" OR \"beta\" OR \"gamma\"",
           {
             operator: "OR",
-            left: { type: "phrase", value: "alpha" },
-            right: {
+            left: {
               operator: "OR",
-              left: { type: "phrase", value: "beta" },
-              right: { type: "phrase", value: "gamma" }
+              left: { type: "phrase", value: "alpha" },
+              right: { type: "phrase", value: "beta" },
             },
+            right: { type: "phrase", value: "gamma" }
           }
         ],
       ];
@@ -582,12 +708,12 @@ describe("simple-search-parser", () => {
           "\"alpha\" AND beta AND gamma",
           {
             operator: "AND",
-            left: { type: "phrase", value: "alpha" },
-            right: {
+            left: {
               operator: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" }
+              left: { type: "phrase", value: "alpha" },
+              right: { type: "term", value: "beta" }
             },
+            right: { type: "term", value: "gamma" }
           }
         ],
         [
@@ -595,12 +721,12 @@ describe("simple-search-parser", () => {
           "alpha AND \"beta\" AND gamma",
           {
             operator: "AND",
-            left: { type: "term", value: "alpha" },
-            right: {
+            left: {
               operator: "AND",
-              left: { type: "phrase", value: "beta" },
-              right: { type: "term", value: "gamma" }
+              left: { type: "term", value: "alpha" },
+              right: { type: "phrase", value: "beta" }
             },
+            right: { type: "term", value: "gamma" }
           }
         ],
         [
@@ -608,12 +734,51 @@ describe("simple-search-parser", () => {
           "alpha AND beta AND \"gamma\"",
           {
             operator: "AND",
-            left: { type: "term", value: "alpha" },
-            right: {
+            left: {
               operator: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "phrase", value: "gamma" }
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" }
             },
+            right: { type: "phrase", value: "gamma" }
+          }
+        ],
+        [
+          "AND/AND with term containing multiple words",
+          "\"alpha a A\" AND beta b B AND gamma g G",
+          {
+            operator: "AND",
+            left: {
+              operator: "AND",
+              left: { type: "phrase", value: "alpha a A" },
+              right: { type: "term", value: "beta b B" }
+            },
+            right: { type: "term", value: "gamma g G" }
+          }
+        ],
+        [
+          "AND/AND with term containing multiple words",
+          "alpha a A AND \"beta\" AND gamma g G",
+          {
+            operator: "AND",
+            left: {
+              operator: "AND",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "phrase", value: "beta" }
+            },
+            right: { type: "term", value: "gamma g G" }
+          }
+        ],
+        [
+          "AND/AND with term containing multiple words",
+          "alpha a A AND beta b B AND \"gamma\"",
+          {
+            operator: "AND",
+            left: {
+              operator: "AND",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "term", value: "beta b B" }
+            },
+            right: { type: "phrase", value: "gamma" }
           }
         ]
       ];
@@ -667,8 +832,7 @@ describe("simple-search-parser", () => {
             type: "term",
             value: "OR"
           }
-        },
-        SKIP
+        }
       ],
       [
         "OR without left operand should treat OR as part of query",
@@ -685,6 +849,66 @@ describe("simple-search-parser", () => {
           }
         }
       ],
+      [
+        "AND without right operand should treat AND as part of query for term with multiple words",
+        "alpha a AND ",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "alpha a"
+          },
+          right: {
+            type: "term",
+            value: "AND"
+          }
+        }
+      ],
+      [
+        "AND without left operand should treat AND as part of query for term with multiple words",
+        " AND beta b",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "AND"
+          },
+          right: {
+            type: "term",
+            value: "beta b"
+          }
+        }
+      ],
+      [
+        "OR without right operand should treat OR as part of query for term with multiple words",
+        "alpha a OR ",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "alpha a"
+          },
+          right: {
+            type: "term",
+            value: "OR"
+          }
+        }
+      ],
+      [
+        "OR without left operand should treat OR as part of query for term with multiple words",
+        " OR beta b",
+        {
+          operator: "OR",
+          left: {
+            type: "term",
+            value: "OR"
+          },
+          right: {
+            type: "term",
+            value: "beta b"
+          }
+        }
+      ]
     ];
 
     testSyntacticallyCorrectQueries(queries);  
@@ -699,6 +923,14 @@ describe("simple-search-parser", () => {
           {
             operator: "NOT",
             right: { type: "term", value: "alpha" }
+          }
+        ],
+        [
+          "unary NOT, unquoted term with multiple words",
+          'NOT alpha gamma beta',
+          {
+            operator: "NOT",
+            right: { type: "term", value: "alpha gamma beta" }
           }
         ],
         [
@@ -769,6 +1001,18 @@ describe("simple-search-parser", () => {
           }
         ],
         [
+          "unary NOT of terms conjunction with multiple words",
+          'NOT (alpha a A AND beta b B)',
+          {
+            operator: "NOT",
+            right: {
+              operator: "AND",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "term", value: "beta b B" },
+            }
+          }
+        ],
+        [
           "unary NOT of terms disjunction",
           'NOT (alpha OR beta)',
           {
@@ -777,6 +1021,18 @@ describe("simple-search-parser", () => {
               operator: "OR",
               left: { type: "term", value: "alpha" },
               right: { type: "term", value: "beta" },
+            }
+          }
+        ],
+        [
+          "unary NOT of terms disjunction with multiple words",
+          'NOT (alpha a A OR beta b B)',
+          {
+            operator: "NOT",
+            right: {
+              operator: "OR",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "term", value: "beta b B" },
             }
           }
         ],
@@ -830,6 +1086,31 @@ describe("simple-search-parser", () => {
           }
         ],
         [
+          "OR NOT grouped AND with multiple words",
+          "a A OR NOT (b B AND c C)",
+          {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "a A"
+            },
+            right: {
+              operator: "NOT",
+              right: {
+                operator: "AND",
+                left: {
+                  type: "term",
+                  value: "b B"
+                },
+                right: {
+                  type: "term",
+                  value: "c C"
+                }
+              }
+            }
+          }
+        ],
+        [
           "AND NOT grouped OR",
           "a AND NOT (b OR c)",
           {
@@ -849,6 +1130,31 @@ describe("simple-search-parser", () => {
                 right: {
                   type: "term",
                   value: "c"
+                }
+              }
+            }
+          }
+        ],
+        [
+          "AND NOT grouped OR with multiple words",
+          "a A AND NOT (b B OR c C)",
+          {
+            operator: "AND",
+            left: {
+              type: "term",
+              value: "a A"
+            },
+            right: {
+              operator: "NOT",
+              right: {
+                operator: "OR",
+                left: {
+                  type: "term",
+                  value: "b B"
+                },
+                right: {
+                  type: "term",
+                  value: "c C"
                 }
               }
             }
@@ -888,6 +1194,36 @@ describe("simple-search-parser", () => {
             right: {
               operator: "NOT",
               right: { type: "term", value: "beta" },
+            }
+          }
+        ],
+        [
+          "conjunction of unary NOT terms with multiple terms",
+          'NOT alpha A AND NOT beta B',
+          {
+            operator: "AND",
+            left: {
+              operator: "NOT",
+              right: { type: "term", value: "alpha A" },
+            },
+            right: {
+              operator: "NOT",
+              right: { type: "term", value: "beta B" },
+            }
+          }
+        ],
+        [
+          "disjunction of unary NOT terms",
+          'NOT alpha A OR NOT beta B',
+          {
+            operator: "OR",
+            left: {
+              operator: "NOT",
+              right: { type: "term", value: "alpha A" },
+            },
+            right: {
+              operator: "NOT",
+              right: { type: "term", value: "beta B" },
             }
           }
         ],
@@ -935,11 +1271,13 @@ describe("simple-search-parser", () => {
           "alpha,beta,gamma",
           {
             operator: "AND",
-            left: { type: "term", value: "alpha" },
-            right: {
+            left: {
               operator: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" },
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" },
+            },
+            right: {
+              type: "term", value: "gamma"
             },
           },
         ],
@@ -948,14 +1286,46 @@ describe("simple-search-parser", () => {
           "alpha, beta, gamma",
           {
             operator: "AND",
-            left: { type: "term", value: "alpha" },
-            right: {
+            left: { 
               operator: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" },
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" },
+            },
+            right: {
+              type: "term", value: "gamma"
             },
           },
         ],
+        [
+          "comma-delimited list of terms should be parsed as 3 ANDed terms with multiple words",
+          "alpha a A,beta b B,gamma g G",
+          {
+            operator: "AND",
+            left: {
+              operator: "AND",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "term", value: "beta b B" },
+            },
+            right: {
+              type: "term", value: "gamma g G"
+            },
+          },
+        ],
+        [
+          "comma-delimited list of terms with separating spaces should be parsed as 3 ANDed terms with multiple words",
+          "alpha a, beta b, gamma g",
+          {
+            operator: "AND",
+            left: { 
+              operator: "AND",
+              left: { type: "term", value: "alpha a" },
+              right: { type: "term", value: "beta b" },
+            },
+            right: {
+              type: "term", value: "gamma g"
+            },
+          },
+        ]
       ];
 
       testSyntacticallyCorrectQueries(queries);
@@ -967,15 +1337,14 @@ describe("simple-search-parser", () => {
           "mixed usage of comma and AND should treat as all ANDs",
           "alpha, beta AND gamma",
           {
-            operator: "OR",
-            left: { type: "term", value: "alpha" },
-            right: {
+            operator: "AND",
+            left: {
               operator: "AND",
-              left: { type: "term", value: "beta" },
-              right: { type: "term", value: "gamma" },
+              left: { type: "term", value: "alpha" },
+              right: { type: "term", value: "beta" },
             },
-          },
-          SKIP
+            right: { type: "term", value: "gamma" },
+          }
         ],
         [
           "commas should be treated as ANDs in precedence order",
@@ -990,6 +1359,32 @@ describe("simple-search-parser", () => {
             right: { type: "term", value: "gamma" }
           }
         ],
+        [
+          "mixed usage of comma and AND should treat as all ANDs with terms having multiple words",
+          "alpha a A, beta AND gamma g G",
+          {
+            operator: "AND",
+            left: {
+              operator: "AND",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "term", value: "beta" },
+            },
+            right: { type: "term", value: "gamma g G" },
+          }
+        ],
+        [
+          "commas should be treated as ANDs in precedence order with terms having multiple words",
+          "alpha a A, beta b B OR gamma",
+          {
+            operator: "OR",
+            left: { 
+              operator: "AND",
+              left: { type: "term", value: "alpha a A" },
+              right: { type: "term", value: "beta b B" }
+            },
+            right: { type: "term", value: "gamma" }
+          }
+        ]
       ];
 
       testSyntacticallyCorrectQueries(queries);
@@ -1028,6 +1423,36 @@ describe("simple-search-parser", () => {
           value: "alpha"
         }
       ],
+      [
+        "should treat a parentheses group containing an OR as higher precedence than AND with terms having multiple words",
+        "(alpha a A OR beta b B) AND gamma g G",
+        {
+          operator: "AND",
+          left: {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "alpha a A",
+            },
+            right: {
+              type: "term",
+              value: "beta b B",
+            },
+          },
+          right: {
+            type: "term",
+            value: "gamma g G",
+          },
+        },
+      ],
+      [
+        "superfluous parentheses should be removed with terms having multiple words",
+        "((alpha beta gamma delta))",
+        {
+          type: "term",
+          value: "alpha beta gamma delta"
+        }
+      ],
     ];
 
     testSyntacticallyCorrectQueries(queries);
@@ -1041,12 +1466,12 @@ describe("simple-search-parser", () => {
         {
           operator: "OR",
           left: {
-            type: "term",
-            value: "alpha",
-          },
-          right: {
             operator: "OR",
             left: {
+              type: "term",
+              value: "alpha"
+            },
+            right: {
               operator: "AND",
               left: {
                 type: "term",
@@ -1056,11 +1481,11 @@ describe("simple-search-parser", () => {
                 type: "term",
                 value: "gamma",
               },
-            },
-            right: {
-              type: "term",
-              value: "delta",
-            },
+            }
+          },
+          right: {
+            type: "term",
+            value: "delta",
           },
         },
       ],
@@ -1109,6 +1534,71 @@ describe("simple-search-parser", () => {
         SKIP,
       ],
       [
+        "should treat AND as higher precedence than OR with terms having multiple words",
+        "alpha A OR beta B AND gamma G OR delta D",
+        {
+          operator: "OR",
+          left: {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "alpha A"
+            },
+            right: {
+              operator: "AND",
+              left: {
+                type: "term",
+                value: "beta B",
+              },
+              right: {
+                type: "term",
+                value: "gamma G",
+              },
+            }
+          },
+          right: {
+            type: "term",
+            value: "delta D",
+          },
+        },
+      ],
+      [
+        "should handle deeply-nested groups",
+        "(a A OR b B) AND (c C OR (d D AND e E))",
+        {
+          operator: "AND",
+          left: {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "a A",
+            },
+            right: {
+              type: "term",
+              value: "b B",
+            },
+          },
+          right: {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "c C",
+            },
+            right: {
+              operator: "AND",
+              left: {
+                type: "term",
+                value: "d D",
+              },
+              right: {
+                type: "term",
+                value: "e E",
+              },
+            },
+          },
+        },
+      ],
+      [
         "should handle names that contain embedded commas",
         '"Smith, John L","Jones, Jane D"',
         {
@@ -1131,19 +1621,19 @@ describe("simple-search-parser", () => {
         {
           operator: "AND",
           left: {
-            type: "phrase",
-            value: "alpha",
-          },
-          right: {
             operator: "AND",
             left: {
               type: "phrase",
-              value: "beta",
+              value: "alpha",
             },
             right: {
               type: "phrase",
-              value: "gamma",
-            },
+              value: "beta",
+            }
+          },
+          right: {
+            type: "phrase",
+            value: "gamma",
           },
         },
       ],
@@ -1155,19 +1645,19 @@ describe("simple-search-parser", () => {
           left: {
             operator: "AND",
             left: {
-              type: "phrase",
-              value: "a OR b",
-            },
-            right: {
               operator: "AND",
               left: {
-                type: "term",
-                value: "c",
+                type: "phrase",
+                value: "a OR b",
               },
               right: {
                 type: "term",
+                value: "c",
+              }
+            },
+            right: {
+                type: "term",
                 value: "d",
-              },
             },
           },
           right: {
@@ -1281,6 +1771,150 @@ describe("simple-search-parser", () => {
                         right: {
                           type: "term",
                           value: "e"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      [
+        "should support double-quoted phrases combined with comma-separated terms having multiple words",
+        '"a OR b",c C,d D OR e E',
+        {
+          operator: "OR",
+          left: {
+            operator: "AND",
+            left: {
+              operator: "AND",
+              left: {
+                type: "phrase",
+                value: "a OR b",
+              },
+              right: {
+                type: "term",
+                value: "c C",
+              }
+            },
+            right: {
+                type: "term",
+                value: "d D",
+            },
+          },
+          right: {
+            type: "term",
+            value: "e E",
+          },
+        },
+      ],
+      [
+        "super complex with terms having multiple words",
+        'a A AND (b B OR "c,d" AND ("e OR f"))',
+        {
+          operator: "AND",
+          left: {
+            type: "term",
+            value: "a A",
+          },
+          right: {
+            operator: "OR",
+            left: {
+              type: "term",
+              value: "b B",
+            },
+            right: {
+              operator: "AND",
+              left: {
+                type: "phrase",
+                value: "c,d",
+              },
+              right: {
+                type: "phrase",
+                value: "e OR f",
+              },
+            },
+          },
+        },
+      ],
+      [
+        "really complicated nested NOTs with terms having multiple words",
+        "(a A AND NOT b B) AND NOT (c C OR NOT d D)",
+        {
+          operator: "AND",
+          left: {
+            operator: "AND",
+            left: {
+              type: "term",
+              value: "a A"
+            },
+            right: {
+              operator: "NOT",
+              right: {
+                type: "term",
+                value: "b B"
+              }
+            }
+          },
+          right: {
+            operator: "NOT",
+            right: {
+              operator: "OR",
+              left: {
+                type: "term",
+                value: "c C"
+              },
+              right: {
+                operator: "NOT",
+                right: {
+                  type: "term",
+                  value: "d D"
+                }
+              }
+            }
+          }
+        }
+      ],
+      [
+        "chain of nested NOTs with terms having multiple words",
+        "a A AND NOT (b B AND NOT (c C AND NOT (d D AND NOT e E)))",
+        {
+          operator: "AND",
+          left: {
+            type: "term",
+            value: "a A"
+          },
+          right: {
+            operator: "NOT",
+            right: {
+              operator: "AND",
+              left: {
+                type: "term",
+                value: "b B"
+              },
+              right: {
+                operator: "NOT",
+                right: {
+                  operator: "AND",
+                  left: {
+                    type: "term",
+                    value: "c C"
+                  },
+                  right: {
+                    operator: "NOT",
+                    right: {
+                      operator: "AND",
+                      left: {
+                        type: "term",
+                        value: "d D"
+                      },
+                      right: {
+                        operator: "NOT",
+                        right: {
+                          type: "term",
+                          value: "e E"
                         }
                       }
                     }
