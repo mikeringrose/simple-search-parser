@@ -1,90 +1,66 @@
-{
-  const findLeftMostOperator = (node) => {
-    if (!node) {
-      return null;
-    }
-    
-    if (node.operator) {
-      return node;
-    }
-    
-    if (!node.left) {
-      return node;
-    }
-    
-    return findLeftMostOperator(node.left);
-  };
-  
-  const buildOpTree = (operator, terms) => {
-    if (terms.length === 1) {
-      return terms[0];
+OrExp
+  = head:AndExpr tail:(_ or _ AndExpr)* {
+  	  return tail.reduce(function(result, element) {
+      	if(result.value=="") { // OR operator used without left operand
+        	result.value = "OR";
+        }
+        
+        if(element[3].value=="") { // OR operator used without right operand
+        	element[3].value = "OR";    
+        }
+
+        if (element[1] === "OR") { 
+          return {
+            operator: "OR",
+            left: result,
+            right: element[3]
+          }
+        }
+      }, head);
     }
 
-    return {
-      operator,
-      left: terms[0],
-      right: buildOpTree(operator, terms.slice(1))
-    };
-  };
-  
-  const buildAndTree = buildOpTree.bind(null, "AND");
-  
-  const buildOrTree = buildOpTree.bind(null, "OR");
-}
-
-Expr
-  = Or_Expr
-
-Or_Expr
-  = _* head:And_Expr tail:(_* "OR"? _* And_Expr)* _*
-    {
-      let left = head;
-      let right;
-      let operator;
-
-      // this is a bit hairy and ugly
-      if (!head.operator && head.left && head.left.operator === "NOT") {
-        return findLeftMostOperator(head);
-      } else if (tail.length == 1) {
-        operator = tail[1] ? tail[1] : "<implicit>";
-        // left = head.operator ? head : head.left;
-        right = tail[0][3].operator
-            ? tail[0][3]
-                : tail[0][3].left
-                  ? tail[0][3].left
-                  : tail[0][3];
-      }
-      
-      if (!operator && !tail.length) {
-        return left;
-      }
-      
-      const terms = tail.map(term => term[3]);
-      return buildOrTree([head, ...terms]);
+AndExpr
+  = head:NotExpr tail:(_ and _ NotExpr)* {
+      return tail.reduce(function(result, element) {
+        if(result.value=="") { // AND operator used without left operand
+          if(element[3].value=="") { // AND operator used without right operand
+          	element[3].value = "AND";
+          }
+          result.value = "AND";
+            return {
+              operator: "OR",
+              left: result,
+              right: element[3]
+            }
+        }
+          
+        if(element[3].value=="") { // AND operator used without right operand
+          element[3].value = "AND";
+          return {
+            operator: "OR",
+            left: result,
+            right: element[3]
+          }
+        }
+        if (element[1] === "AND"|| element[1] === ",") { 
+          return {
+            operator: "AND",
+            left: result,
+            right: element[3]
+          }
+        }
+      }, head);
     }
 
-And_Expr
-  = first:Not_Expr _* "," _* second:Not_Expr _* tail:(_* "," _* Not_Expr)*
-    {
-      const terms = tail.map(term => term[3]);
-      return buildAndTree([first, second, ...terms]);
-    }
-  / head:Not_Expr tail:(_+ "AND" _+ Not_Expr)*
-    {
-      const terms = tail.map(term => term[3]);
-      return buildAndTree([head, ...terms]);
-    }
-
-Not_Expr
-  = "(" expr:Expr ")" { return expr; }
-  / "NOT" _+ right:Not_Expr
+NotExpr
+  = not _ right:NotExpr
     {
       return {
         operator: "NOT",
         right
       }
     }
-  / head:(Term _+)? "NOT" _+ right:Term
+  / head:(ParenthesisTerm _)? not _ right:ParenthesisTerm
     {
       let left = null;
       
@@ -98,7 +74,11 @@ Not_Expr
         right
       }
     }
-  / term:Term
+  / ParenthesisTerm
+
+ParenthesisTerm
+  = "(" _ expr:OrExp _ ")" { return expr; }
+  / Term
 
 Term
   = DOUBLE_QUOTES term:[^"”“]+ DOUBLE_QUOTES 
@@ -106,6 +86,13 @@ Term
       return {
         type: 'phrase',
         value: term.join("")
+      }
+    }
+  / term:textWithoutAdvancedOperator
+    {
+      return {
+        type: 'term',
+        value: term
       }
     }
   / term:[^("|”|“| |,)]+ 
@@ -116,8 +103,28 @@ Term
       }
     }
 
-_ "whitespace"
-  = [ \t\n\r]
+and
+  = "AND"
+  / ","
+  
+or
+  = "OR"
 
-DOUBLE_QUOTES "double quotes"
+not
+  = "NOT"
+
+textWithoutAdvancedOperator = $(!breakWord .)* { return text().trim() }
+
+breakWord
+  = and
+  / or
+  / not
+  / "("
+  / ")"
+  / DOUBLE_QUOTES
+
+_ "whitespace"
+  = [ \t\n\r]*
+  
+DOUBLE_QUOTES
   = ["“”]
